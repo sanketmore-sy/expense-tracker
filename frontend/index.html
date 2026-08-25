@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Daily Expense Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>💰 Student Daily Expense Tracker</h1>
+    <p>Log your spending and see where it's going — stored right in your browser</p>
+  </header>
+
+  <div class="container">
+
+    <!-- ADD EXPENSE -->
+    <div class="card">
+      <div class="card-header-row">
+        <h2>Add Expense</h2>
+        <label class="quick-toggle">
+          <input type="checkbox" id="quickAddToggle">
+          Quick Add
+        </label>
+      </div>
+
+      <input type="number" id="amount" placeholder="Amount (₹)">
+
+      <select id="category">
+        <option value="Food">Food</option>
+        <option value="Transport">Transport</option>
+        <option value="Study">Study</option>
+        <option value="Entertainment">Entertainment</option>
+        <option value="Rent">Rent</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <div id="dateRow">
+        <input type="date" id="date">
+      </div>
+
+      <div id="noteRow">
+        <input type="text" id="note" placeholder="Note (optional)">
+      </div>
+
+      <button id="addBtn">Add Expense</button>
+    </div>
+
+    <!-- DAILY SUMMARY -->
+    <div class="card">
+      <h2>Daily Summary</h2>
+      <div class="totals">
+        <div class="total-box">
+          <span class="label">Today</span>
+          <span class="value" id="todayTotal">₹0</span>
+        </div>
+        <div class="total-box">
+          <span class="label">Yesterday</span>
+          <span class="value" id="yesterdayTotal">₹0</span>
+        </div>
+      </div>
+      <p id="comparisonText" class="comparison"></p>
+    </div>
+
+    <!-- BUDGET -->
+    <div class="card">
+      <h2>Daily Budget</h2>
+      <input type="number" id="budgetInput" placeholder="Set your daily limit (₹)">
+      <div id="budgetBox" class="budget-box" style="display:none;">
+        <div class="budget-bar-bg"><div id="budgetBar" class="budget-bar-fill"></div></div>
+        <p id="budgetText" class="budget-text"></p>
+      </div>
+    </div>
+
+    <!-- CATEGORY BREAKDOWN -->
+    <div class="card">
+      <div class="card-header-row">
+        <h2>Category Breakdown</h2>
+        <select id="breakdownScope">
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="all" selected>All Time</option>
+        </select>
+      </div>
+      <div id="categoryBreakdown"></div>
+    </div>
+
+    <!-- EXPENSE LIST -->
+    <div class="card">
+      <h2>All Expenses</h2>
+
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="today">Today</button>
+        <button class="filter-tab" data-filter="yesterday">Yesterday</button>
+        <button class="filter-tab" data-filter="week">Last 7 Days</button>
+        <button class="filter-tab" data-filter="all">All</button>
+        <button class="filter-tab" data-filter="custom">Custom</button>
+      </div>
+
+      <div id="customRange" class="custom-range" style="display:none;">
+        <input type="date" id="customStart">
+        <span>to</span>
+        <input type="date" id="customEnd">
+      </div>
+
+      <div class="sort-row">
+        <label for="sortBy">Sort by:</label>
+        <select id="sortBy">
+          <option value="date-desc">Date (newest first)</option>
+          <option value="date-asc">Date (oldest first)</option>
+          <option value="amount-desc">Amount (high → low)</option>
+          <option value="amount-asc">Amount (low → high)</option>
+        </select>
+      </div>
+
+      <div id="expenseList"></div>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

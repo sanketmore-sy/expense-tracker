@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Secrets - never commit these
+.env
+*.pem
+
+# Terraform (we'll add these files in Part 2C, ignoring them now)
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.terraform.lock.hcl
+
+# OS junk files
+.DS_Store
+Thumbs.db
