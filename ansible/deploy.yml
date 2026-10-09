@@ -1,0 +1,66 @@
+---
+- name: Configure server and deploy Expense Tracker
+  hosts: web
+  become: yes
+  vars_files:
+    - vars.yml
+
+  vars:
+    app_dir: "/home/ubuntu/app"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install prerequisites
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - git
+        state: present
+
+    - name: Install Docker Engine
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Install Docker Compose plugin
+      apt:
+        name: docker-compose-v2
+        state: present
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Clone or update the project repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: main
+        force: yes
+
+    - name: Recreate backend .env file on the server
+      copy:
+        dest: "{{ app_dir }}/backend/.env"
+        content: |
+          PORT=3000
+          MONGO_URI={{ mongo_uri }}
+        mode: "0600"
+
+    - name: Build and start containers with Docker Compose
+      command: docker compose up -d --build
+      args:
+        chdir: "{{ app_dir }}"
