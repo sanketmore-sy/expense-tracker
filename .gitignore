@@ -2,7 +2,8 @@
 node_modules/
 
 # Secrets - never commit these
-.env
+   ansible/vars.yml
+   .env
 *.pem
 
 # Terraform (we'll add these files in Part 2C, ignoring them now)

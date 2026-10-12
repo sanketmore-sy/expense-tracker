@@ -1,0 +1,2 @@
+mongo_uri: "mongodb+srv://sanket:More123898@sanket.erko7ya.mongodb.net/expensetracker?retryWrites=true&w=majority&appName=sanket"
+repo_url: "https://github.com/sanketmore-sy/expense-tracker.git"
