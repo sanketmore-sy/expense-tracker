@@ -71,7 +71,7 @@ jobs:
             ${{ env.DOCKERHUB_USER }}/expense-tracker-frontend:latest
             ${{ env.DOCKERHUB_USER }}/expense-tracker-frontend:${{ github.sha }}
 
-     deploy:
+  deploy:
     name: Deploy to EC2 server
     needs: docker
     runs-on: ubuntu-latest
