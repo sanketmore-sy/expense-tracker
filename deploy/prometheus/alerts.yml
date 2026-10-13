@@ -1,0 +1,38 @@
+groups:
+  - name: expense-tracker-alerts
+    rules:
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend is down"
+          description: "Prometheus cannot scrape the backend for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[2m])) / sum(rate(http_requests_total[2m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than 5 percent of requests fail"
+          description: "The share of HTTP 5xx responses has been above 5 percent for 2 minutes."
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "95th percentile latency above 1 second"
+          description: "The slowest 5 percent of requests take longer than 1 second."
+
+      - alert: HighServerMemory
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Server memory above 90 percent"
+          description: "The EC2 server is running low on memory."

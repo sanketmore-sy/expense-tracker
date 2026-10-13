@@ -71,7 +71,7 @@ jobs:
             ${{ env.DOCKERHUB_USER }}/expense-tracker-frontend:latest
             ${{ env.DOCKERHUB_USER }}/expense-tracker-frontend:${{ github.sha }}
 
-  deploy:
+     deploy:
     name: Deploy to EC2 server
     needs: docker
     runs-on: ubuntu-latest
@@ -83,6 +83,11 @@ jobs:
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
         run: printf 'PORT=3000\nMONGO_URI=%s\n' "$MONGO_URI" > deploy/app.env
+
+      - name: Create grafana.env from the GRAFANA_PASSWORD secret
+        env:
+          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD }}
+        run: printf 'GF_SECURITY_ADMIN_PASSWORD=%s\nGF_USERS_ALLOW_SIGN_UP=false\n' "$GRAFANA_PASSWORD" > deploy/grafana.env
 
       - name: Copy deployment files to the server
         uses: appleboy/scp-action@v0.1.7
@@ -104,6 +109,7 @@ jobs:
             cd /home/ubuntu/deploy
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml restart prometheus
             docker image prune -f
 
       - name: Verify the live site is healthy
