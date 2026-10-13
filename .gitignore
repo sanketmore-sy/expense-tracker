@@ -5,3 +5,4 @@ node_modules
 *.tfstate.backup
 .terraform
 ansible/vars.yml
+deploy/app.env

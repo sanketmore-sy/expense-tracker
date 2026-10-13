@@ -70,3 +70,51 @@ jobs:
           tags: |
             ${{ env.DOCKERHUB_USER }}/expense-tracker-frontend:latest
             ${{ env.DOCKERHUB_USER }}/expense-tracker-frontend:${{ github.sha }}
+
+  deploy:
+    name: Deploy to EC2 server
+    needs: docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Create app.env from the MONGO_URI secret
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+        run: printf 'PORT=3000\nMONGO_URI=%s\n' "$MONGO_URI" > deploy/app.env
+
+      - name: Copy deployment files to the server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: 13.201.133.106
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "deploy/*"
+          target: /home/ubuntu/deploy
+          strip_components: 1
+
+      - name: Start the new version on the server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 13.201.133.106
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/deploy
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
+
+      - name: Verify the live site is healthy
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS http://13.201.133.106:3000/api/health | grep -q '"db":"connected"'; then
+              echo "Backend is healthy and connected to the database"
+              exit 0
+            fi
+            echo "Not ready yet (attempt $i of 12), waiting 5 seconds..."
+            sleep 5
+          done
+          echo "Health check FAILED"
+          exit 1
