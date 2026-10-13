@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const client = require("prom-client");
+const logic = require("./logic");
 
 const app = express();
 app.use(cors());
@@ -9,11 +11,6 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/expensetracker";
-
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
 
 // ---------- Schemas ----------
 const expenseSchema = new mongoose.Schema({
@@ -24,124 +21,88 @@ const expenseSchema = new mongoose.Schema({
 });
 const Expense = mongoose.model("Expense", expenseSchema);
 
-// Single-document collection to store the daily budget limit
 const settingsSchema = new mongoose.Schema({
   dailyLimit: { type: Number, default: 0 },
 });
 const Settings = mongoose.model("Settings", settingsSchema);
 
-app.get("/api/health", (req, res) => res.json({ status: "ok" }));
+// ---------- Prometheus metrics (for monitoring) ----------
+client.collectDefaultMetrics(); // CPU, memory, event loop, etc.
 
-// ---------- Shared pure logic (same math as the localStorage version) ----------
-function dateKey(d) {
-  const dt = new Date(d);
-  dt.setHours(0, 0, 0, 0);
-  return dt.toISOString().slice(0, 10);
-}
+const httpRequestsTotal = new client.Counter({
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status"],
+});
 
-function computeDailyTotals(expenses, now = new Date()) {
-  const tKey = dateKey(now);
-  const yKey = dateKey(new Date(now.getTime() - 86400000));
+const httpRequestDuration = new client.Histogram({
+  name: "http_request_duration_seconds",
+  help: "HTTP request duration in seconds",
+  labelNames: ["method", "route", "status"],
+  buckets: [0.01, 0.05, 0.1, 0.3, 0.5, 1, 2, 5],
+});
 
-  const todayTotal = expenses.filter((e) => dateKey(e.date) === tKey).reduce((s, e) => s + e.amount, 0);
-  const yesterdayTotal = expenses.filter((e) => dateKey(e.date) === yKey).reduce((s, e) => s + e.amount, 0);
+new client.Gauge({
+  name: "expenses_stored_total",
+  help: "Number of expenses currently stored in the database",
+  async collect() {
+    if (mongoose.connection.readyState === 1) {
+      try {
+        this.set(await Expense.countDocuments());
+      } catch (err) {
+        // ignore - gauge keeps its previous value
+      }
+    }
+  },
+});
 
-  const diff = todayTotal - yesterdayTotal;
-  let comparisonText;
-  if (diff > 0) {
-    const pct = yesterdayTotal > 0 ? Math.round((diff / yesterdayTotal) * 100) : 100;
-    comparisonText = `You spent ₹${diff} (${pct}% more) than yesterday.`;
-  } else if (diff < 0) {
-    const pct = yesterdayTotal > 0 ? Math.round((Math.abs(diff) / yesterdayTotal) * 100) : 100;
-    comparisonText = `You spent ₹${Math.abs(diff)} (${pct}% less) than yesterday.`;
-  } else if (todayTotal === 0) {
-    comparisonText = "No expenses logged today yet.";
-  } else {
-    comparisonText = "You spent the same as yesterday.";
-  }
-
-  return { todayTotal, yesterdayTotal, diff, comparisonText };
-}
-
-function computeCategoryBreakdown(expenses, scope = "all", now = new Date()) {
-  let scoped = expenses;
-  if (scope === "today") {
-    const tKey = dateKey(now);
-    scoped = expenses.filter((e) => dateKey(e.date) === tKey);
-  } else if (scope === "week") {
-    const cutoff = new Date(now);
-    cutoff.setDate(cutoff.getDate() - 6);
-    cutoff.setHours(0, 0, 0, 0);
-    scoped = expenses.filter((e) => new Date(e.date) >= cutoff);
-  }
-
-  const map = {};
-  scoped.forEach((e) => {
-    map[e.category] = (map[e.category] || 0) + e.amount;
+// Measure every request (except /metrics itself) and write one JSON log line per request
+app.use((req, res, next) => {
+  if (req.path === "/metrics") return next();
+  const start = process.hrtime.bigint();
+  const stopTimer = httpRequestDuration.startTimer();
+  res.on("finish", () => {
+    const route = req.route ? req.baseUrl + req.route.path : "unmatched";
+    const labels = { method: req.method, route, status: res.statusCode };
+    httpRequestsTotal.inc(labels);
+    stopTimer(labels);
+    if (process.env.NODE_ENV !== "test") {
+      const ms = Number(process.hrtime.bigint() - start) / 1e6;
+      console.log(
+        JSON.stringify({
+          level: res.statusCode >= 500 ? "error" : "info",
+          msg: "request",
+          method: req.method,
+          path: req.originalUrl,
+          status: res.statusCode,
+          ms: Math.round(ms),
+        })
+      );
+    }
   });
-  const total = Object.values(map).reduce((s, v) => s + v, 0);
+  next();
+});
 
-  return Object.entries(map)
-    .map(([category, amount]) => ({
-      category,
-      amount,
-      percent: total > 0 ? Math.round((amount / total) * 100) : 0,
-    }))
-    .sort((a, b) => b.amount - a.amount);
-}
-
-function filterExpenses(expenses, filterType, customStart, customEnd, now = new Date()) {
-  if (filterType === "today") {
-    const tKey = dateKey(now);
-    return expenses.filter((e) => dateKey(e.date) === tKey);
-  }
-  if (filterType === "yesterday") {
-    const yKey = dateKey(new Date(now.getTime() - 86400000));
-    return expenses.filter((e) => dateKey(e.date) === yKey);
-  }
-  if (filterType === "week") {
-    const cutoff = new Date(now);
-    cutoff.setDate(cutoff.getDate() - 6);
-    cutoff.setHours(0, 0, 0, 0);
-    return expenses.filter((e) => new Date(e.date) >= cutoff);
-  }
-  if (filterType === "custom" && customStart && customEnd) {
-    const start = new Date(customStart);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(customEnd);
-    end.setHours(23, 59, 59, 999);
-    return expenses.filter((e) => {
-      const d = new Date(e.date);
-      return d >= start && d <= end;
-    });
-  }
-  return expenses; // "all"
-}
-
-function sortExpenses(expenses, sortBy) {
-  const copy = [...expenses];
-  if (sortBy === "amount-desc") return copy.sort((a, b) => b.amount - a.amount);
-  if (sortBy === "amount-asc") return copy.sort((a, b) => a.amount - b.amount);
-  if (sortBy === "date-asc") return copy.sort((a, b) => new Date(a.date) - new Date(b.date));
-  return copy.sort((a, b) => new Date(b.date) - new Date(a.date)); // date-desc, default
-}
-
-function computeBudgetStatus(todayTotal, dailyLimit) {
-  if (!dailyLimit || dailyLimit <= 0) return null;
-  const percent = Math.min(Math.round((todayTotal / dailyLimit) * 100), 999);
-  const level = percent >= 100 ? "over" : percent >= 80 ? "warning" : "ok";
-  return { percent, level, limit: dailyLimit, spent: todayTotal };
-}
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", client.register.contentType);
+  res.end(await client.register.metrics());
+});
 
 // ---------- Routes ----------
+app.get("/api/health", (req, res) =>
+  res.json({
+    status: "ok",
+    db: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+  })
+);
 
 // GET /api/expenses?filter=today|yesterday|week|all|custom&start=&end=&sort=date-desc
 app.get("/api/expenses", async (req, res) => {
   try {
     const { filter = "all", start, end, sort = "date-desc" } = req.query;
     const all = await Expense.find();
-    let filtered = filterExpenses(all, filter, start, end);
-    filtered = sortExpenses(filtered, sort);
+    let filtered = logic.filterExpenses(all, filter, start, end);
+    filtered = logic.sortExpenses(filtered, sort);
     res.json(filtered);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -175,20 +136,20 @@ app.delete("/api/expenses/:id", async (req, res) => {
   }
 });
 
-// GET /api/summary?scope=today|week|all  -> daily totals + category breakdown
+// GET /api/summary?scope=today|week|all
 app.get("/api/summary", async (req, res) => {
   try {
     const { scope = "all" } = req.query;
     const all = await Expense.find();
-    const daily = computeDailyTotals(all);
-    const categoryBreakdown = computeCategoryBreakdown(all, scope);
+    const daily = logic.computeDailyTotals(all);
+    const categoryBreakdown = logic.computeCategoryBreakdown(all, scope);
     res.json({ ...daily, categoryBreakdown });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET /api/budget -> { dailyLimit }
+// GET /api/budget
 app.get("/api/budget", async (req, res) => {
   try {
     let settings = await Settings.findOne();
@@ -199,7 +160,7 @@ app.get("/api/budget", async (req, res) => {
   }
 });
 
-// POST /api/budget  { dailyLimit }  -> also returns current budget STATUS using today's total
+// POST /api/budget  { dailyLimit }
 app.post("/api/budget", async (req, res) => {
   try {
     const { dailyLimit } = req.body;
@@ -209,8 +170,8 @@ app.post("/api/budget", async (req, res) => {
     await settings.save();
 
     const all = await Expense.find();
-    const daily = computeDailyTotals(all);
-    const status = computeBudgetStatus(daily.todayTotal, settings.dailyLimit);
+    const daily = logic.computeDailyTotals(all);
+    const status = logic.computeBudgetStatus(daily.todayTotal, settings.dailyLimit);
 
     res.json({ dailyLimit: settings.dailyLimit, status });
   } catch (err) {
@@ -218,19 +179,30 @@ app.post("/api/budget", async (req, res) => {
   }
 });
 
-// GET /api/budget-status -> current status without changing the limit
+// GET /api/budget-status
 app.get("/api/budget-status", async (req, res) => {
   try {
     const settings = await Settings.findOne();
     const all = await Expense.find();
-    const daily = computeDailyTotals(all);
-    const status = settings ? computeBudgetStatus(daily.todayTotal, settings.dailyLimit) : null;
+    const daily = logic.computeDailyTotals(all);
+    const status = settings ? logic.computeBudgetStatus(daily.todayTotal, settings.dailyLimit) : null;
     res.json({ dailyLimit: settings ? settings.dailyLimit : 0, status });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Only connect to the database and start listening when run directly (node server.js).
+// When the tests require() this file, nothing connects and no port is opened.
+if (require.main === module) {
+  mongoose
+    .connect(MONGO_URI)
+    .then(() => console.log("MongoDB connected"))
+    .catch((err) => console.error("MongoDB connection error:", err.message));
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
