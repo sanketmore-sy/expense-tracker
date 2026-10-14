@@ -4,64 +4,124 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Student Expense Tracker</title>
+  <meta name="description" content="Track your daily student spending, compare today with yesterday and see where every rupee goes." />
+  <meta name="theme-color" content="#0f4c3a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f4c3a'/%3E%3Ccircle cx='32' cy='32' r='19' fill='%23f2b134'/%3E%3Ctext x='32' y='41' font-size='26' font-family='Georgia,serif' font-weight='700' text-anchor='middle' fill='%230f4c3a'%3E%E2%82%B9%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,800;1,9..144,600;1,9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
   <!-- ===== Login / Register ===== -->
   <section id="auth-view" class="auth hidden">
-    <div class="auth-card">
-      <h1>💸 Expense Tracker</h1>
-      <p class="muted">Track your daily student spending</p>
-      <div class="tabs">
-        <button id="tab-login" class="tab active" type="button">Login</button>
-        <button id="tab-register" class="tab" type="button">Register</button>
+    <div class="auth-shell">
+
+      <div class="auth-hero">
+        <div class="brand">
+          <span class="logo-mark">₹</span>
+          <span class="brand-text">Expense Tracker<small>FOR STUDENTS</small></span>
+        </div>
+
+        <span class="pill-tag">● Daily spending, made simple</span>
+        <h2 class="hero-title">Know where<br />every rupee<br /><em>goes.</em></h2>
+        <p class="hero-sub">Log what you spend in seconds. See today against yesterday, this week against last week, and stay under your daily budget.</p>
+
+        <ul class="hero-chips">
+          <li>☕ Chai &amp; coffee</li>
+          <li>🚌 Travel</li>
+          <li>📚 Study</li>
+          <li>🍔 Food</li>
+        </ul>
+
+        <div class="auth-visual" aria-hidden="true">
+          <div class="vis-card">
+            <div class="vis-head"><span>Today</span><b>▼ 18% vs yesterday</b></div>
+            <div class="vis-amount">₹420</div>
+            <div class="vis-bars">
+              <i style="--h:42%"></i><i style="--h:68%"></i><i style="--h:35%"></i><i style="--h:80%"></i>
+              <i style="--h:55%"></i><i style="--h:48%"></i><i class="now" style="--h:38%"></i>
+            </div>
+          </div>
+          <div class="vis-ring"><span>₹3,150<small>this week</small></span></div>
+          <div class="vis-float f1">🍔 Lunch · ₹120</div>
+          <div class="vis-float f2">🚌 Bus pass · ₹300</div>
+        </div>
       </div>
 
-      <form id="login-form" class="stack">
-        <input id="login-email" type="email" placeholder="Email" autocomplete="username" required />
-        <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" required />
-        <button class="btn primary" type="submit">Login</button>
-      </form>
+      <div class="auth-card">
+        <h1>Welcome 👋</h1>
+        <p class="muted">Log in or create a free account to start tracking.</p>
+        <div class="tabs">
+          <button id="tab-login" class="tab active" type="button">Login</button>
+          <button id="tab-register" class="tab" type="button">Register</button>
+        </div>
 
-      <form id="register-form" class="stack hidden">
-        <input id="reg-name" type="text" placeholder="Your name" autocomplete="name" required />
-        <input id="reg-email" type="email" placeholder="Email" autocomplete="username" required />
-        <input id="reg-password" type="password" placeholder="Password (min 8 characters)" autocomplete="new-password" required />
-        <button class="btn primary" type="submit">Create account</button>
-      </form>
+        <form id="login-form" class="stack">
+          <input id="login-email" type="email" placeholder="Email" autocomplete="username" required />
+          <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" required />
+          <button class="btn primary" type="submit">Login</button>
+        </form>
 
-      <p id="auth-error" class="error"></p>
+        <form id="register-form" class="stack hidden">
+          <input id="reg-name" type="text" placeholder="Your name" autocomplete="name" required />
+          <input id="reg-email" type="email" placeholder="Email" autocomplete="username" required />
+          <input id="reg-password" type="password" placeholder="Password (min 8 characters)" autocomplete="new-password" required />
+          <button class="btn primary" type="submit">Create account</button>
+        </form>
+
+        <p id="auth-error" class="error"></p>
+        <p class="auth-foot">Your data is private to your account.</p>
+      </div>
+
     </div>
   </section>
 
   <!-- ===== Main app ===== -->
   <div id="app-view" class="hidden">
     <header class="topbar">
-      <h1>💸 Expense Tracker</h1>
-      <div class="topbar-right">
-        <span id="user-name" class="muted"></span>
-        <button id="logout-btn" class="btn" type="button">Logout</button>
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="logo-mark">₹</span>
+          <span class="brand-text">Expense Tracker<small>FOR STUDENTS</small></span>
+        </div>
+        <nav class="topnav" aria-label="Sections">
+          <a href="#sec-add">Add</a>
+          <a href="#sec-charts">Charts</a>
+          <a href="#sec-compare">Compare</a>
+          <a href="#sec-list">Expenses</a>
+        </nav>
+        <div class="topbar-right">
+          <span id="user-name" class="user-chip"></span>
+          <button id="logout-btn" class="btn" type="button">Logout</button>
+        </div>
       </div>
     </header>
 
     <main class="container">
+
+      <div class="page-hero">
+        <p class="eyebrow">YOUR MONEY AT A GLANCE</p>
+        <h2 class="page-title">Spend <em>smart</em>, every day.</h2>
+      </div>
+
       <p id="app-error" class="error"></p>
 
       <!-- Summary cards -->
       <section class="grid cards">
-        <div class="card"><div class="label">Today</div><div id="today-total" class="big">₹0</div></div>
-        <div class="card"><div class="label">Yesterday</div><div id="yesterday-total" class="big">₹0</div></div>
-        <div class="card wide">
+        <div class="card stat stat-today"><div class="label">Today</div><div id="today-total" class="big">₹0</div></div>
+        <div class="card stat"><div class="label">Yesterday</div><div id="yesterday-total" class="big">₹0</div></div>
+        <div class="card stat wide">
           <div class="label">Compared with yesterday</div>
           <div id="comparison-text" class="text">Loading...</div>
         </div>
       </section>
 
-      <section class="grid two">
+      <section class="grid two" id="sec-add">
         <!-- Add expense -->
         <div class="card">
-          <h2>Add expense</h2>
+          <h2><span class="ico">＋</span>Add expense</h2>
           <form id="expense-form" class="stack">
             <input id="exp-amount" type="number" min="1" step="any" placeholder="Amount (₹)" required />
             <select id="exp-category">
@@ -76,18 +136,19 @@
 
         <!-- Budget -->
         <div class="card">
-          <h2>Daily budget</h2>
+          <h2><span class="ico">◎</span>Daily budget</h2>
           <div class="row">
             <input id="budget-input" type="number" min="0" step="any" placeholder="Daily limit (₹)" />
             <button id="budget-save" class="btn" type="button">Save</button>
           </div>
           <div class="progress"><div id="budget-bar" class="bar"></div></div>
           <p id="budget-text" class="muted">No limit set.</p>
+          <p class="hint">Green is safe, amber means you are close to your limit and red means you have gone over it.</p>
         </div>
       </section>
 
       <!-- Charts -->
-      <h2 class="section-title">Charts</h2>
+      <h2 class="section-title" id="sec-charts">Charts</h2>
       <p id="chart-warning" class="error hidden">Charts could not load (Chart.js did not download). Check your internet and refresh.</p>
       <section class="grid two">
         <div class="card">
@@ -114,7 +175,7 @@
         </div>
       </section>
 
-      <h3 class="section-title small">Comparisons</h3>
+      <h3 class="section-title small" id="sec-compare">Comparisons</h3>
       <section class="grid three">
         <div class="card"><div id="cmp-today-text" class="cmp-text"></div><div class="chart-box short"><canvas id="chart-cmp-today"></canvas></div></div>
         <div class="card"><div id="cmp-week-text" class="cmp-text"></div><div class="chart-box short"><canvas id="chart-cmp-week"></canvas></div></div>
@@ -122,8 +183,8 @@
       </section>
 
       <!-- Expense list -->
-      <section class="card">
-        <h2>Your expenses</h2>
+      <section class="card" id="sec-list">
+        <h2><span class="ico">☰</span>Your expenses</h2>
         <div class="row wrap">
           <select id="filter">
             <option value="all">All</option>
@@ -152,6 +213,12 @@
         <p id="empty-text" class="muted hidden">No expenses for this filter.</p>
       </section>
     </main>
+
+    <footer class="site-foot">
+      <span>Student Daily Expense Tracker</span>
+      <span class="dot-sep">·</span>
+      <span>Built with Docker, GitHub Actions CI/CD, Prometheus &amp; Grafana</span>
+    </footer>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>

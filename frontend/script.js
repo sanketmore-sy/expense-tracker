@@ -3,7 +3,19 @@ const API_BASE = `http://${window.location.hostname}:3000/api`;
 const TOKEN_KEY = "et_token";
 const USER_KEY = "et_user";
 const $ = (id) => document.getElementById(id);
-const COLORS = ["#4f46e5", "#16a34a", "#f59e0b", "#dc2626", "#0ea5e9", "#a855f7", "#64748b"];
+const COLORS = ["#0f4c3a", "#1f9d63", "#f2b134", "#d94a3d", "#2a7fba", "#6d4fb3", "#8a9188"];
+// One fixed colour per category (the CSS dots use the same colours).
+const CATEGORY_COLORS = {
+  Food: "#e07a1f", Transport: "#2a7fba", Study: "#6d4fb3", Entertainment: "#d6427a",
+  Shopping: "#0f9d8a", Health: "#d94a3d", Other: "#8a9188",
+};
+const GRID = "rgba(17,36,29,.08)";
+// Chart look and feel only (fonts and colours).
+if (typeof Chart !== "undefined") {
+  Chart.defaults.font.family = '"Inter", system-ui, sans-serif';
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = "#6d7a72";
+}
 
 let charts = {};
 let analyticsData = null;
@@ -128,6 +140,7 @@ function renderExpenses(list) {
       td.textContent = t;
       tr.appendChild(td);
     });
+    tr.children[1].dataset.cat = e.category;
     const amount = document.createElement("td");
     amount.className = "num";
     amount.textContent = rupee(e.amount);
@@ -153,6 +166,7 @@ async function loadSummary() {
   ul.innerHTML = "";
   s.categoryBreakdown.forEach((c) => {
     const li = document.createElement("li");
+    li.dataset.cat = c.category;
     const a = document.createElement("span");
     a.textContent = c.category;
     const b = document.createElement("span");
@@ -165,9 +179,15 @@ async function loadSummary() {
     type: "doughnut",
     data: {
       labels: s.categoryBreakdown.map((c) => c.category),
-      datasets: [{ data: s.categoryBreakdown.map((c) => c.amount), backgroundColor: COLORS }],
+      datasets: [{
+        data: s.categoryBreakdown.map((c) => c.amount),
+        backgroundColor: s.categoryBreakdown.map((c) => CATEGORY_COLORS[c.category] || "#8a9188"),
+        borderColor: "#fffdf8",
+        borderWidth: 4,
+        hoverOffset: 8,
+      }],
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "64%", plugins: { legend: { position: "bottom", labels: { usePointStyle: true, pointStyle: "circle", padding: 14 } } } },
   });
 }
 
@@ -218,9 +238,9 @@ function drawDaily() {
     type: "line",
     data: {
       labels: rows.map((r) => r.date.slice(5)),
-      datasets: [{ label: "Spent (₹)", data: rows.map((r) => r.total), borderColor: COLORS[0], backgroundColor: "rgba(79,70,229,.15)", fill: true, tension: 0.3 }],
+      datasets: [{ label: "Spent (₹)", data: rows.map((r) => r.total), borderColor: COLORS[0], backgroundColor: "rgba(15,76,58,.12)", fill: true, tension: 0.35, borderWidth: 3, pointRadius: 3, pointHoverRadius: 6, pointBackgroundColor: "#f2b134", pointBorderColor: COLORS[0] }],
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: GRID } }, x: { grid: { display: false } } } },
   });
 }
 
@@ -231,9 +251,9 @@ function drawComparison(key, canvasId, textId, c) {
     type: "bar",
     data: {
       labels: [c.previousLabel, c.currentLabel],
-      datasets: [{ data: [c.previous, c.current], backgroundColor: ["#94a3b8", COLORS[0]] }],
+      datasets: [{ data: [c.previous, c.current], backgroundColor: ["#d9d2bf", COLORS[0]], borderRadius: 10, borderSkipped: false, maxBarThickness: 64 }],
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: GRID } }, x: { grid: { display: false } } } },
   });
 }
 
