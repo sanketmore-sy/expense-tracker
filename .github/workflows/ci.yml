@@ -79,10 +79,11 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Create app.env from the MONGO_URI secret
+      - name: Create app.env from the secrets
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
-        run: printf 'PORT=3000\nMONGO_URI=%s\n' "$MONGO_URI" > deploy/app.env
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: printf 'PORT=3000\nMONGO_URI=%s\nJWT_SECRET=%s\n' "$MONGO_URI" "$JWT_SECRET" > deploy/app.env
 
       - name: Create grafana.env from the GRAFANA_PASSWORD secret
         env:

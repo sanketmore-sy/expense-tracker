@@ -1,122 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>  Live Student Daily Expense Tracker</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Student Expense Tracker</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1>💰 Student Daily Expense Tracker</h1>
-    <p>Log your spending and see where it's going — stored right in your browser</p>
-  </header>
 
-  <div class="container">
-
-    <!-- ADD EXPENSE -->
-    <div class="card">
-      <div class="card-header-row">
-        <h2>Add Expense</h2>
-        <label class="quick-toggle">
-          <input type="checkbox" id="quickAddToggle">
-          Quick Add
-        </label>
+  <!-- ===== Login / Register ===== -->
+  <section id="auth-view" class="auth hidden">
+    <div class="auth-card">
+      <h1>💸 Expense Tracker</h1>
+      <p class="muted">Track your daily student spending</p>
+      <div class="tabs">
+        <button id="tab-login" class="tab active" type="button">Login</button>
+        <button id="tab-register" class="tab" type="button">Register</button>
       </div>
 
-      <input type="number" id="amount" placeholder="Amount (₹)">
+      <form id="login-form" class="stack">
+        <input id="login-email" type="email" placeholder="Email" autocomplete="username" required />
+        <input id="login-password" type="password" placeholder="Password" autocomplete="current-password" required />
+        <button class="btn primary" type="submit">Login</button>
+      </form>
 
-      <select id="category">
-        <option value="Food">Food</option>
-        <option value="Transport">Transport</option>
-        <option value="Study">Study</option>
-        <option value="Entertainment">Entertainment</option>
-        <option value="Rent">Rent</option>
-        <option value="Other">Other</option>
-      </select>
+      <form id="register-form" class="stack hidden">
+        <input id="reg-name" type="text" placeholder="Your name" autocomplete="name" required />
+        <input id="reg-email" type="email" placeholder="Email" autocomplete="username" required />
+        <input id="reg-password" type="password" placeholder="Password (min 8 characters)" autocomplete="new-password" required />
+        <button class="btn primary" type="submit">Create account</button>
+      </form>
 
-      <div id="dateRow">
-        <input type="date" id="date">
-      </div>
-
-      <div id="noteRow">
-        <input type="text" id="note" placeholder="Note (optional)">
-      </div>
-
-      <button id="addBtn">Add Expense</button>
+      <p id="auth-error" class="error"></p>
     </div>
+  </section>
 
-    <!-- DAILY SUMMARY -->
-    <div class="card">
-      <h2>Daily Summary</h2>
-      <div class="totals">
-        <div class="total-box">
-          <span class="label">Today</span>
-          <span class="value" id="todayTotal">₹0</span>
+  <!-- ===== Main app ===== -->
+  <div id="app-view" class="hidden">
+    <header class="topbar">
+      <h1>💸 Expense Tracker</h1>
+      <div class="topbar-right">
+        <span id="user-name" class="muted"></span>
+        <button id="logout-btn" class="btn" type="button">Logout</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <p id="app-error" class="error"></p>
+
+      <!-- Summary cards -->
+      <section class="grid cards">
+        <div class="card"><div class="label">Today</div><div id="today-total" class="big">₹0</div></div>
+        <div class="card"><div class="label">Yesterday</div><div id="yesterday-total" class="big">₹0</div></div>
+        <div class="card wide">
+          <div class="label">Compared with yesterday</div>
+          <div id="comparison-text" class="text">Loading...</div>
         </div>
-        <div class="total-box">
-          <span class="label">Yesterday</span>
-          <span class="value" id="yesterdayTotal">₹0</span>
+      </section>
+
+      <section class="grid two">
+        <!-- Add expense -->
+        <div class="card">
+          <h2>Add expense</h2>
+          <form id="expense-form" class="stack">
+            <input id="exp-amount" type="number" min="1" step="any" placeholder="Amount (₹)" required />
+            <select id="exp-category">
+              <option>Food</option><option>Transport</option><option>Study</option>
+              <option>Entertainment</option><option>Shopping</option><option>Health</option><option>Other</option>
+            </select>
+            <input id="exp-date" type="date" required />
+            <input id="exp-note" type="text" maxlength="200" placeholder="Note (optional)" />
+            <button class="btn primary" type="submit">Add expense</button>
+          </form>
         </div>
-      </div>
-      <p id="comparisonText" class="comparison"></p>
-    </div>
 
-    <!-- BUDGET -->
-    <div class="card">
-      <h2>Daily Budget</h2>
-      <input type="number" id="budgetInput" placeholder="Set your daily limit (₹)">
-      <div id="budgetBox" class="budget-box" style="display:none;">
-        <div class="budget-bar-bg"><div id="budgetBar" class="budget-bar-fill"></div></div>
-        <p id="budgetText" class="budget-text"></p>
-      </div>
-    </div>
+        <!-- Budget -->
+        <div class="card">
+          <h2>Daily budget</h2>
+          <div class="row">
+            <input id="budget-input" type="number" min="0" step="any" placeholder="Daily limit (₹)" />
+            <button id="budget-save" class="btn" type="button">Save</button>
+          </div>
+          <div class="progress"><div id="budget-bar" class="bar"></div></div>
+          <p id="budget-text" class="muted">No limit set.</p>
+        </div>
+      </section>
 
-    <!-- CATEGORY BREAKDOWN -->
-    <div class="card">
-      <div class="card-header-row">
-        <h2>Category Breakdown</h2>
-        <select id="breakdownScope">
-          <option value="today">Today</option>
-          <option value="week">This Week</option>
-          <option value="all" selected>All Time</option>
-        </select>
-      </div>
-      <div id="categoryBreakdown"></div>
-    </div>
+      <!-- Charts -->
+      <h2 class="section-title">Charts</h2>
+      <p id="chart-warning" class="error hidden">Charts could not load (Chart.js did not download). Check your internet and refresh.</p>
+      <section class="grid two">
+        <div class="card">
+          <div class="row between">
+            <h3>Spending by category</h3>
+            <select id="cat-scope">
+              <option value="all">All time</option>
+              <option value="week">Last 7 days</option>
+              <option value="today">Today</option>
+            </select>
+          </div>
+          <div class="chart-box"><canvas id="chart-category"></canvas></div>
+          <ul id="category-list" class="cat-list"></ul>
+        </div>
+        <div class="card">
+          <div class="row between">
+            <h3>Spending per day</h3>
+            <select id="daily-range">
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+            </select>
+          </div>
+          <div class="chart-box"><canvas id="chart-daily"></canvas></div>
+        </div>
+      </section>
 
-    <!-- EXPENSE LIST -->
-    <div class="card">
-      <h2>All Expenses</h2>
+      <h3 class="section-title small">Comparisons</h3>
+      <section class="grid three">
+        <div class="card"><div id="cmp-today-text" class="cmp-text"></div><div class="chart-box short"><canvas id="chart-cmp-today"></canvas></div></div>
+        <div class="card"><div id="cmp-week-text" class="cmp-text"></div><div class="chart-box short"><canvas id="chart-cmp-week"></canvas></div></div>
+        <div class="card"><div id="cmp-month-text" class="cmp-text"></div><div class="chart-box short"><canvas id="chart-cmp-month"></canvas></div></div>
+      </section>
 
-      <div class="filter-tabs">
-        <button class="filter-tab active" data-filter="today">Today</button>
-        <button class="filter-tab" data-filter="yesterday">Yesterday</button>
-        <button class="filter-tab" data-filter="week">Last 7 Days</button>
-        <button class="filter-tab" data-filter="all">All</button>
-        <button class="filter-tab" data-filter="custom">Custom</button>
-      </div>
-
-      <div id="customRange" class="custom-range" style="display:none;">
-        <input type="date" id="customStart">
-        <span>to</span>
-        <input type="date" id="customEnd">
-      </div>
-
-      <div class="sort-row">
-        <label for="sortBy">Sort by:</label>
-        <select id="sortBy">
-          <option value="date-desc">Date (newest first)</option>
-          <option value="date-asc">Date (oldest first)</option>
-          <option value="amount-desc">Amount (high → low)</option>
-          <option value="amount-asc">Amount (low → high)</option>
-        </select>
-      </div>
-
-      <div id="expenseList"></div>
-    </div>
-
+      <!-- Expense list -->
+      <section class="card">
+        <h2>Your expenses</h2>
+        <div class="row wrap">
+          <select id="filter">
+            <option value="all">All</option>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="week">Last 7 days</option>
+            <option value="custom">Custom range</option>
+          </select>
+          <span id="custom-range" class="row hidden">
+            <input id="filter-start" type="date" />
+            <input id="filter-end" type="date" />
+          </span>
+          <select id="sort">
+            <option value="date-desc">Newest first</option>
+            <option value="date-asc">Oldest first</option>
+            <option value="amount-desc">Amount: high to low</option>
+            <option value="amount-asc">Amount: low to high</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Category</th><th>Note</th><th class="num">Amount</th><th></th></tr></thead>
+            <tbody id="expense-body"></tbody>
+          </table>
+        </div>
+        <p id="empty-text" class="muted hidden">No expenses for this filter.</p>
+      </section>
+    </main>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
